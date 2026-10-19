@@ -1,0 +1,12 @@
+# Ignores node_modules in any folder (root, frontend, backend, etc.)
+**/node_modules/
+frontend/node_modules/
+
+# Next.js build output in frontend
+**/frontend/.next/
+**/.next/
+frontend/out/
+frontend/build/
+
+# Environment files
+**/.env*

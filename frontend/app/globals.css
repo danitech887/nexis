@@ -1,0 +1,252 @@
+@import "tailwindcss";
+
+/* ─── NEXIS Design Tokens ────────────────────────────────────────── */
+:root {
+  --bg-canvas:    #03070D;
+  --bg-surface:   #070D16;
+  --bg-panel:     #0A1220;
+  --bg-border:    #112233;
+
+  --cyan:         #00E5FF;
+  --cyan-dim:     #00B8CC;
+  --cyan-glow:    rgba(0, 229, 255, 0.25);
+  --magenta:      #FF0055;
+  --magenta-dim:  #CC0044;
+  --magenta-glow: rgba(255, 0, 85, 0.25);
+  --yellow:       #FFD600;
+  --yellow-dim:   #CCB000;
+  --yellow-glow:  rgba(255, 214, 0, 0.25);
+  --green:        #00FF66;
+  --green-dim:    #00CC52;
+  --green-glow:   rgba(0, 255, 102, 0.25);
+
+  --text-primary:   #E0F0FF;
+  --text-secondary: #5A7A9A;
+  --text-muted:     #2A4A6A;
+
+  --font-mono: "JetBrains Mono", "Fira Code", "Cascadia Code", ui-monospace, monospace;
+}
+
+/* ─── Base Reset ─────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--bg-canvas);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── CRT Scanlines Overlay ──────────────────────────────────────── */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.08) 2px,
+    rgba(0, 0, 0, 0.08) 4px
+  );
+}
+
+/* ─── Custom Scrollbars ──────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-canvas); }
+::-webkit-scrollbar-thumb {
+  background: var(--bg-border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--cyan-dim); }
+
+/* Firefox */
+* { scrollbar-width: thin; scrollbar-color: var(--bg-border) var(--bg-canvas); }
+
+/* ─── Glow Animations ────────────────────────────────────────────── */
+@keyframes pulse-cyan {
+  0%, 100% { box-shadow: 0 0 4px var(--cyan-glow), 0 0 8px var(--cyan-glow); }
+  50%       { box-shadow: 0 0 12px var(--cyan-glow), 0 0 24px var(--cyan-glow); }
+}
+@keyframes pulse-magenta {
+  0%, 100% { box-shadow: 0 0 4px var(--magenta-glow), 0 0 8px var(--magenta-glow); }
+  50%       { box-shadow: 0 0 12px var(--magenta-glow), 0 0 24px var(--magenta-glow); }
+}
+@keyframes pulse-green {
+  0%, 100% { box-shadow: 0 0 4px var(--green-glow), 0 0 8px var(--green-glow); }
+  50%       { box-shadow: 0 0 12px var(--green-glow), 0 0 24px var(--green-glow); }
+}
+@keyframes pulse-yellow {
+  0%, 100% { box-shadow: 0 0 4px var(--yellow-glow), 0 0 8px var(--yellow-glow); }
+  50%       { box-shadow: 0 0 12px var(--yellow-glow), 0 0 24px var(--yellow-glow); }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+@keyframes glitch {
+  0%   { clip-path: inset(40% 0 61% 0); transform: translate(-4px, 0); }
+  20%  { clip-path: inset(92% 0 1% 0);  transform: translate(4px, 0); }
+  40%  { clip-path: inset(43% 0 1% 0);  transform: translate(-4px, 0); }
+  60%  { clip-path: inset(25% 0 58% 0); transform: translate(4px, 0); }
+  80%  { clip-path: inset(54% 0 7% 0);  transform: translate(-4px, 0); }
+  100% { clip-path: inset(58% 0 43% 0); transform: translate(0, 0); }
+}
+
+@keyframes scan-line {
+  0%   { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes matrix-rain {
+  0%   { opacity: 1; transform: translateY(-20px); }
+  100% { opacity: 0; transform: translateY(100px); }
+}
+
+/* ─── Nexis Cyber Emblem & Loader Keyframes ───────────────────────── */
+@keyframes nexisSpinClockwise {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes nexisSpinCounter {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-360deg); }
+}
+
+@keyframes nexisCorePulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.92;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+
+@keyframes nexisBracketPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.75;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+}
+
+@keyframes nexisIndeterminateScan {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(120%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}
+
+@keyframes nexisHeartbeat {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 6px rgba(0, 229, 255, 0.45));
+  }
+  12% {
+    transform: scale(1.06);
+    filter: drop-shadow(0 0 14px rgba(0, 255, 102, 0.75)) drop-shadow(0 0 22px rgba(0, 229, 255, 0.5));
+  }
+  24% {
+    transform: scale(0.99);
+  }
+  36% {
+    transform: scale(1.04);
+    filter: drop-shadow(0 0 12px rgba(255, 0, 85, 0.6)) drop-shadow(0 0 18px rgba(0, 255, 102, 0.4));
+  }
+  50% {
+    transform: scale(1);
+  }
+}
+
+@keyframes nexisEcgScan {
+  0% {
+    transform: translateX(-150%);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.9;
+  }
+  80% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateX(150%);
+    opacity: 0;
+  }
+}
+
+/* ─── Utility Classes ────────────────────────────────────────────── */
+.glow-cyan    { text-shadow: 0 0 8px var(--cyan), 0 0 16px var(--cyan-glow); }
+.glow-magenta { text-shadow: 0 0 8px var(--magenta), 0 0 16px var(--magenta-glow); }
+.glow-green   { text-shadow: 0 0 8px var(--green), 0 0 16px var(--green-glow); }
+.glow-yellow  { text-shadow: 0 0 8px var(--yellow), 0 0 16px var(--yellow-glow); }
+
+.border-glow-cyan    { border-color: var(--cyan);    box-shadow: 0 0 8px var(--cyan-glow); }
+.border-glow-magenta { border-color: var(--magenta); box-shadow: 0 0 8px var(--magenta-glow); }
+.border-glow-green   { border-color: var(--green);   box-shadow: 0 0 8px var(--green-glow); }
+.border-glow-yellow  { border-color: var(--yellow);  box-shadow: 0 0 8px var(--yellow-glow); }
+
+.cyber-grid-bg {
+  background-image:
+    linear-gradient(rgba(0, 229, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 229, 255, 0.03) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.terminal-text { font-family: var(--font-mono); }
+.animate-pulse-cyan    { animation: pulse-cyan 2s ease-in-out infinite; }
+.animate-pulse-magenta { animation: pulse-magenta 2s ease-in-out infinite; }
+.animate-pulse-green   { animation: pulse-green 2s ease-in-out infinite; }
+.animate-pulse-yellow  { animation: pulse-yellow 2s ease-in-out infinite; }
+.animate-blink         { animation: blink 1s step-end infinite; }
+.animate-fadeinup      { animation: fadeInUp 0.4s ease forwards; }
+
+/* ─── Scan-line decorative element ──────────────────────────────── */
+.crt-scan::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(transparent, rgba(0, 229, 255, 0.06), transparent);
+  animation: scan-line 4s linear infinite;
+  pointer-events: none;
+}
+
+/* ─── Corner decoration ──────────────────────────────────────────── */
+.corner-tl::before,
+.corner-br::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-color: var(--cyan);
+  border-style: solid;
+}
+.corner-tl::before { top: 0; left: 0; border-width: 1px 0 0 1px; }
+.corner-br::after  { bottom: 0; right: 0; border-width: 0 1px 1px 0; }
