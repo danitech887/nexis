@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import CyberCard from "@/components/ui/CyberCard";
 import VitalsBadge from "@/components/shell/VitalsBadge";
@@ -9,6 +9,7 @@ import CyberButton from "@/components/ui/CyberButton";
 import NexisLogo from "@/components/ui/NexisLogo";
 import NexisLoader from "@/components/ui/NexisLoader";
 import { useActiveSoftware } from "@/lib/ActiveSoftwareContext";
+import { fetchVitalsForSoftware, LiveVitalsPayload } from "@/lib/backendApi";
 
 const GRADE_MAP: Record<string, { label: string; color: string }> = {
   A: { label: "A", color: "#00FF66" },
@@ -19,78 +20,111 @@ const GRADE_MAP: Record<string, { label: string; color: string }> = {
 };
 
 export default function DashboardPage() {
-  const { activeSoftware, fleet } = useActiveSoftware();
+  const { activeSoftware, fleet, refreshFleet } = useActiveSoftware();
   const [isSyncing, setIsSyncing] = useState(false);
+  const [liveVitals, setLiveVitals] = useState<LiveVitalsPayload | null>(null);
+  const [lastSyncTime, setLastSyncTime] = useState<string>("Connecting...");
+  const [isLiveConnected, setIsLiveConnected] = useState<boolean>(false);
 
-  const handleRefresh = () => {
+  // Poll live vitals from backend
+  const loadLiveVitals = async () => {
     setIsSyncing(true);
-    setTimeout(() => {
+    try {
+      const data = await fetchVitalsForSoftware(activeSoftware.id);
+      if (data) {
+        setLiveVitals(data);
+        setIsLiveConnected(true);
+        setLastSyncTime(new Date().toLocaleTimeString());
+      } else {
+        setIsLiveConnected(false);
+      }
+    } catch {
+      setIsLiveConnected(false);
+    } finally {
       setIsSyncing(false);
-    }, 1000);
+    }
   };
 
-  // Generate dynamic subsystem modules based on active software category
-  const activeSubsystems = activeSoftware.category === "Mobile"
-    ? [
-        { name: "Jetpack Compose UI", grade: "A", status: "online" as const },
-        { name: "Room SQLite Local DB", grade: "D", status: "warn" as const, note: "ANR write locks" },
-        { name: "WorkManager Sync", grade: "B", status: "online" as const },
-        { name: "Retrofit Network Client", grade: "B", status: "online" as const },
-        { name: "Security & KeyStore", grade: "C", status: "warn" as const, note: "Plaintext prefs" },
-      ]
-    : activeSoftware.category === "Desktop"
-    ? [
-        { name: "PyQt5 Event Loop", grade: "A", status: "online" as const },
-        { name: "USB HID RFID Bridge", grade: "A", status: "online" as const },
-        { name: "SQLite WAL Engine", grade: "A", status: "online" as const },
-        { name: "Offline Sync Daemon", grade: "B", status: "online" as const },
-      ]
+  useEffect(() => {
+    loadLiveVitals();
+    // Auto-poll every 5 seconds for telemetry instrumentation
+    const interval = setInterval(loadLiveVitals, 5000);
+    return () => clearInterval(interval);
+  }, [activeSoftware.id]);
+
+  const handleManualRefresh = async () => {
+    await refreshFleet();
+    await loadLiveVitals();
+  };
+
+  // Merge live metrics with activeSoftware fallback
+  const cpuDisplay = liveVitals?.metrics.cpu || activeSoftware.metrics.cpu;
+  const memoryDisplay = liveVitals?.metrics.memory || activeSoftware.metrics.memory;
+  const p99LatencyDisplay = liveVitals?.metrics.p99_latency || activeSoftware.metrics.p99Latency;
+  const errorCountDisplay = liveVitals ? liveVitals.metrics.error_count : activeSoftware.errorCount;
+  const hasSpikeDisplay = liveVitals ? liveVitals.metrics.has_spike : activeSoftware.hasSpike;
+  const activeSessionsDisplay = liveVitals?.metrics.active_sessions || activeSoftware.metrics.activeSessions;
+  const sastGradeDisplay = liveVitals?.metrics.sast_grade || activeSoftware.sastGrade;
+  const overallVitals = liveVitals?.vitals || activeSoftware.vitals;
+
+  // Subsystems from live backend or static platform fallback
+  const renderedSubsystems = liveVitals?.subsystems && liveVitals.subsystems.length > 0
+    ? liveVitals.subsystems
     : [
-        { name: "Gunicorn WSGI Workers", grade: "A", status: "online" as const },
-        { name: "Django REST Endpoints", grade: "B", status: "online" as const },
-        { name: "PostgreSQL Primary Pool", grade: "C", status: "warn" as const, note: "Connection resets" },
-        { name: "Celery Task Broker", grade: "A", status: "online" as const },
-        { name: "Redis Ingress Cache", grade: "A", status: "online" as const },
+        { name: "Ingress Gateway Router", grade: "A", status: "online" as const },
+        { name: "Application Runtime Pool", grade: "A", status: "online" as const },
+        { name: "Persistence & Data Store", grade: "A", status: "online" as const },
+        { name: "Async Job Dispatcher", grade: "A", status: "online" as const },
+        { name: "Edge Cache / Buffer", grade: "A", status: "online" as const },
       ];
 
   const metrics = [
-    { label: "CPU USAGE", value: activeSoftware.metrics.cpu, trend: "nominal", accent: "cyan" as const, warn: false },
-    { label: "MEMORY", value: activeSoftware.metrics.memory, trend: "stable", accent: "cyan" as const, warn: false },
+    { label: "CPU USAGE", value: cpuDisplay, trend: "host load", accent: "cyan" as const, warn: parseFloat(cpuDisplay) > 85 },
+    { label: "MEMORY", value: memoryDisplay, trend: liveVitals?.metrics.memory_percent ? `${liveVitals.metrics.memory_percent} RAM` : "stable", accent: "cyan" as const, warn: false },
     {
       label: "ACTIVE ERRORS",
-      value: String(activeSoftware.errorCount),
-      trend: activeSoftware.hasSpike ? "SPIKE!" : "stable",
-      accent: activeSoftware.errorCount > 20 ? ("magenta" as const) : ("green" as const),
-      warn: activeSoftware.errorCount > 20,
+      value: String(errorCountDisplay),
+      trend: hasSpikeDisplay ? "SPIKE!" : "stable",
+      accent: errorCountDisplay > 10 ? ("magenta" as const) : ("green" as const),
+      warn: errorCountDisplay > 10,
     },
-    { label: "THROUGHPUT", value: activeSoftware.metrics.activeSessions, trend: "+8%", accent: "green" as const, warn: false },
+    { label: "THROUGHPUT", value: activeSessionsDisplay, trend: "ingress", accent: "green" as const, warn: false },
     {
       label: "P99 LATENCY",
-      value: activeSoftware.metrics.p99Latency,
-      trend: parseInt(activeSoftware.metrics.p99Latency) > 300 ? "+48ms" : "optimal",
-      accent: parseInt(activeSoftware.metrics.p99Latency) > 300 ? ("yellow" as const) : ("cyan" as const),
-      warn: parseInt(activeSoftware.metrics.p99Latency) > 300,
+      value: p99LatencyDisplay,
+      trend: parseInt(p99LatencyDisplay) > 300 ? "degraded" : "optimal",
+      accent: parseInt(p99LatencyDisplay) > 300 ? ("yellow" as const) : ("cyan" as const),
+      warn: parseInt(p99LatencyDisplay) > 300,
     },
-    { label: "SAST GRADE", value: activeSoftware.sastGrade, trend: `${activeSoftware.scopedSast.length} alerts`, accent: "cyan" as const, warn: false },
+    { label: "SAST GRADE", value: sastGradeDisplay, trend: `${activeSoftware.scopedSast.length} alerts`, accent: "cyan" as const, warn: false },
   ];
 
   return (
     <div className="h-full overflow-auto p-4 flex flex-col gap-4 animate-fadeinup font-mono">
-      {/* Page title */}
+      {/* Page title & Live Sync Controls */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-[#112233] pb-3">
         <div className="flex items-center gap-3">
-          <NexisLogo size={32} accent="cyan" mode={isSyncing ? "loading" : "idle"} />
+          <NexisLogo size={32} accent={isLiveConnected ? "green" : "cyan"} mode={isSyncing ? "loading" : "idle"} />
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-[#00E5FF] text-sm font-bold tracking-[0.25em] glow-cyan">
                 ◈ HUD VITALS // {activeSoftware.name.toUpperCase()}
               </h1>
-              <span className="text-[10px] text-[#00FF66] bg-[#00FF66]/10 px-1.5 py-0.5 border border-[#00FF66]/30">
-                MONITORING ACTIVE
+              <span
+                className={`text-[10px] px-1.5 py-0.5 border ${
+                  isLiveConnected
+                    ? "text-[#00FF66] bg-[#00FF66]/10 border-[#00FF66]/30"
+                    : "text-[#FFD600] bg-[#FFD600]/10 border-[#FFD600]/30"
+                }`}
+              >
+                {isLiveConnected ? "LIVE BACKEND AGENT CONNECTED" : "OFFLINE / LOCAL CACHED"}
               </span>
             </div>
             <p className="text-[#5A7A9A] text-[10px] tracking-widest mt-0.5">
               PLATFORM: <span className="text-[#C0D8F0] font-bold">{activeSoftware.platform}</span> · {activeSoftware.repoPath}
+              {liveVitals?.target_url && (
+                <span className="ml-2 text-[#00E5FF]">[{liveVitals.target_url}]</span>
+              )}
             </p>
           </div>
         </div>
@@ -109,9 +143,9 @@ export default function DashboardPage() {
           </Link>
 
           <VitalsBadge
-            status={isSyncing ? "warn" : activeSoftware.vitals === "OK" ? "online" : "warn"}
-            label={isSyncing ? "SYNCING" : activeSoftware.vitals.toUpperCase()}
-            accent={activeSoftware.vitals === "OK" ? "green" : "yellow"}
+            status={isSyncing ? "warn" : overallVitals === "OK" ? "online" : "warn"}
+            label={isSyncing ? "SYNCING" : overallVitals.toUpperCase()}
+            accent={overallVitals === "OK" ? "green" : "yellow"}
           />
 
           <CyberButton
@@ -119,22 +153,22 @@ export default function DashboardPage() {
             size="sm"
             variant="ghost"
             disabled={isSyncing}
-            onClick={handleRefresh}
+            onClick={handleManualRefresh}
           >
-            {isSyncing ? "SYNCING…" : "⟳ REFRESH"}
+            {isSyncing ? "SYNCING…" : `⟳ REFRESH (${lastSyncTime})`}
           </CyberButton>
         </div>
       </div>
 
       {/* Sync banner when active */}
       {isSyncing && (
-        <div className="p-2.5 bg-[#070D16] border border-[#00E5FF]/40 animate-fadeinup">
+        <div className="p-2 bg-[#070D16] border border-[#00E5FF]/40 animate-fadeinup">
           <NexisLoader
             size="sm"
             compact
             accent="cyan"
             title="TELEMETRY BUFFER SYNC"
-            subtitle={`POLLING ACTIVE AGENT ON ${activeSoftware.name.toUpperCase()}...`}
+            subtitle={`POLLING LIVE METRICS FROM NEXIS ENGINE (PORT 8000)...`}
           />
         </div>
       )}
@@ -166,13 +200,13 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 min-h-0">
         {/* Subsystem health grades */}
         <CyberCard
-          title={`${activeSoftware.name.toUpperCase()} // SUBSYSTEM HEALTH`}
+          title={`${activeSoftware.name.toUpperCase()} // SUBSYSTEM HEALTH (LIVE PROBE)`}
           accent="cyan"
           className="min-h-[200px]"
         >
           <div className="flex flex-col gap-1 p-2">
-            {activeSubsystems.map((sub) => {
-              const g = GRADE_MAP[sub.grade];
+            {renderedSubsystems.map((sub) => {
+              const g = GRADE_MAP[sub.grade] || GRADE_MAP.A;
               return (
                 <div
                   key={sub.name}
@@ -190,14 +224,14 @@ export default function DashboardPage() {
                       <span className="text-[9px] text-[#FFD600]">{sub.note}</span>
                     )}
                   </div>
-                  <VitalsBadge status={sub.status} label="" accent={sub.status === "online" ? "green" : "yellow"} />
+                  <VitalsBadge status={sub.status as any} label="" accent={sub.status === "online" ? "green" : "yellow"} />
                 </div>
               );
             })}
           </div>
         </CyberCard>
 
-        {/* Anomaly triggers for active software */}
+        {/* Live Anomaly triggers & Incidents for active software */}
         <CyberCard
           title={`${activeSoftware.name.toUpperCase()} // INCIDENTS & ANOMALIES`}
           accent="magenta"
@@ -212,6 +246,29 @@ export default function DashboardPage() {
           className="min-h-[200px]"
         >
           <div className="flex flex-col gap-2 p-2">
+            {/* Live Backend Incidents */}
+            {liveVitals?.incidents && liveVitals.incidents.map((inc) => (
+              <div
+                key={inc.id}
+                className="flex items-start gap-2 py-2 px-2.5 border border-[#FF0055]/30 hover:border-[#FF0055] bg-[#03070D] transition-colors"
+              >
+                <SeverityTag severity={inc.severity} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] text-[#C0D8F0] font-bold leading-tight">{inc.title}</p>
+                  <p className="text-[9px] text-[#2A4A6A] mt-0.5">
+                    {inc.id} · Last seen: {inc.last_seen} · at {inc.location}
+                  </p>
+                  <span className="text-[9px] text-[#FF88A0] block mt-1">
+                    {inc.details}
+                  </span>
+                </div>
+                <Link href="/errors">
+                  <CyberButton accent="magenta" size="sm" variant="ghost">▸</CyberButton>
+                </Link>
+              </div>
+            ))}
+
+            {/* Static Scoped Crashes */}
             {activeSoftware.scopedCrashes.map((a) => (
               <div
                 key={a.id}
@@ -235,9 +292,9 @@ export default function DashboardPage() {
               </div>
             ))}
 
-            {activeSoftware.scopedCrashes.length === 0 && (
+            {(!liveVitals?.incidents || liveVitals.incidents.length === 0) && activeSoftware.scopedCrashes.length === 0 && (
               <div className="p-8 text-center text-[#5A7A9A] text-xs">
-                Zero active crash triggers reported for {activeSoftware.name}.
+                Zero active crash triggers or latency incidents reported for {activeSoftware.name}.
               </div>
             )}
           </div>

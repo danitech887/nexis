@@ -12,14 +12,27 @@ import EnrollModal from "@/components/fleet/EnrollModal";
 type FilterOption = "All" | "Web API" | "Mobile" | "Desktop";
 
 export default function ProjectsPage() {
-  const { fleet, setActiveSoftwareId, enrollSoftware } = useActiveSoftware();
+  const { fleet, setActiveSoftwareId, enrollSoftware, deEnrollSoftware } = useActiveSoftware();
   const [filter, setFilter] = useState<FilterOption>("All");
   const [isEnrollOpen, setIsEnrollOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const router = useRouter();
 
   const handleLaunch = (project: SoftwareProject) => {
     setActiveSoftwareId(project.id);
     router.push("/");
+  };
+
+  const handleDelete = async (project: SoftwareProject, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm(`Are you sure you want to de-enroll "${project.name}" from Nexis? This will remove its monitored nodes and logs.`)) {
+      setDeletingId(project.id);
+      try {
+        await deEnrollSoftware(project.id);
+      } finally {
+        setDeletingId(null);
+      }
+    }
   };
 
   const filteredProjects = fleet.filter((p) => {
@@ -78,111 +91,152 @@ export default function ProjectsPage() {
         </div>
       </div>
 
-      {/* Grid of Software Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {filteredProjects.map((project, idx) => {
-          const isDegraded = project.vitals === "Degraded";
-          const cardAccent = isDegraded ? "yellow" : "cyan";
+      {/* Empty State when no softwares enrolled */}
+      {filteredProjects.length === 0 ? (
+        <div className="flex flex-col items-center justify-center p-12 bg-[#070D16] border border-[#112233] text-center gap-4 my-8 animate-fadeinup">
+          <div className="w-12 h-12 rounded-full border border-[#00FF66]/40 bg-[#00FF66]/10 flex items-center justify-center text-[#00FF66] text-xl font-bold font-mono">
+            ⊞
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-[#C0D8F0] tracking-wider uppercase font-mono">
+              NO MONITORED SYSTEMS ENROLLED
+            </h3>
+            <p className="text-xs text-[#5A7A9A] font-mono mt-1 max-w-md">
+              All previous systems have been de-enrolled. Click below to enroll a new system using your free hosting provider API keys (Render, Vercel, Railway, etc.) or local repository.
+            </p>
+          </div>
+          <CyberButton
+            accent="green"
+            size="md"
+            variant="solid"
+            onClick={() => setIsEnrollOpen(true)}
+          >
+            + ENROLL NEW SOFTWARE TARGET
+          </CyberButton>
+        </div>
+      ) : (
+        /* Grid of Software Cards */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filteredProjects.map((project, idx) => {
+            const isDegraded = project.vitals === "Degraded";
+            const cardAccent = isDegraded ? "yellow" : "cyan";
 
-          return (
-            <CyberCard
-              key={project.id}
-              accent={cardAccent}
-              className="flex flex-col justify-between group transition-all duration-200 hover:border-[#00FF66]/60 hover:shadow-[0_0_24px_rgba(0,255,102,0.15)]"
-            >
-              <div className="p-4 flex flex-col gap-3 font-mono">
-                {/* Header Tag / Category */}
-                <div className="flex items-center justify-between border-b border-[#112233] pb-2 text-[10px]">
-                  <span className="text-[#00E5FF] bg-[#00E5FF]/10 px-2 py-0.5 border border-[#00E5FF]/30 font-bold uppercase tracking-wider">
-                    CARD {idx + 1}: {project.category === "Web API" ? "Web App" : project.category === "Mobile" ? "Mobile App" : "Desktop"}
-                  </span>
-                  <span className="text-[#5A7A9A]">{project.platform}</span>
-                </div>
+            return (
+              <CyberCard
+                key={project.id}
+                accent={cardAccent}
+                className="flex flex-col justify-between group transition-all duration-200 hover:border-[#00FF66]/60 hover:shadow-[0_0_24px_rgba(0,255,102,0.15)]"
+              >
+                <div className="p-4 flex flex-col gap-3 font-mono">
+                  {/* Header Tag / Category */}
+                  <div className="flex items-center justify-between border-b border-[#112233] pb-2 text-[10px]">
+                    <span className="text-[#00E5FF] bg-[#00E5FF]/10 px-2 py-0.5 border border-[#00E5FF]/30 font-bold uppercase tracking-wider">
+                      CARD {idx + 1}: {project.category === "Web API" ? "Web App" : project.category === "Mobile" ? "Mobile App" : "Desktop"}
+                    </span>
+                    <span className="text-[#5A7A9A]">{project.platform}</span>
+                  </div>
 
-                {/* Software Name & Description */}
-                <div>
-                  <h3 className="text-base font-bold text-[#E0F0FF] group-hover:text-[#00FF66] transition-colors">
-                    {project.name}
-                  </h3>
-                  <p className="text-[#5A7A9A] text-[11px] leading-relaxed mt-1 line-clamp-2">
-                    {project.description}
-                  </p>
-                </div>
+                  {/* Software Name & Description */}
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-base font-bold text-[#E0F0FF] group-hover:text-[#00FF66] transition-colors">
+                        {project.name}
+                      </h3>
+                      {project.provider && (
+                        <span className="text-[9px] font-mono uppercase bg-[#00FF66]/10 text-[#00FF66] px-1.5 py-0.5 border border-[#00FF66]/30">
+                          {project.provider}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[#5A7A9A] text-[11px] leading-relaxed mt-1 line-clamp-2">
+                      {project.description}
+                    </p>
+                  </div>
 
-                {/* Vitals Indicator */}
-                <div className="flex items-center gap-2 py-1 px-2.5 bg-[#03070D] border border-[#112233]">
-                  <span
-                    className={`w-2 h-2 rounded-full ${
-                      project.vitals === "OK"
-                        ? "bg-[#00FF66] shadow-[0_0_6px_#00FF66]"
-                        : project.vitals === "Degraded"
-                        ? "bg-[#FFD600] animate-pulse shadow-[0_0_6px_#FFD600]"
-                        : "bg-[#FF0055] shadow-[0_0_6px_#FF0055]"
-                    }`}
-                  />
-                  <span className="text-xs font-bold text-[#C0D8F0]">
-                    Vitals:{" "}
-                    <strong
-                      className={
-                        project.vitals === "OK"
-                          ? "text-[#00FF66]"
-                          : project.vitals === "Degraded"
-                          ? "text-[#FFD600]"
-                          : "text-[#FF0055]"
-                      }
-                    >
-                      {project.vitals}
-                    </strong>
-                  </span>
-                </div>
-
-                {/* Error count & SAST Grade */}
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="p-2 bg-[#03070D] border border-[#112233]">
-                    <span className="text-[9px] text-[#5A7A9A] block">ERRORS</span>
+                  {/* Vitals Indicator */}
+                  <div className="flex items-center gap-2 py-1 px-2.5 bg-[#03070D] border border-[#112233]">
                     <span
-                      className={`font-bold ${
-                        project.errorCount > 20
-                          ? "text-[#FF0055]"
-                          : project.errorCount > 0
-                          ? "text-[#FFD600]"
-                          : "text-[#00FF66]"
+                      className={`w-2 h-2 rounded-full ${
+                        project.vitals === "OK"
+                          ? "bg-[#00FF66] shadow-[0_0_6px_#00FF66]"
+                          : project.vitals === "Degraded"
+                          ? "bg-[#FFD600] animate-pulse shadow-[0_0_6px_#FFD600]"
+                          : "bg-[#FF0055] shadow-[0_0_6px_#FF0055]"
                       }`}
-                    >
-                      {project.errorCount} {project.hasSpike && <span className="text-[#FF0055] text-[10px] animate-pulse">(Spike!)</span>}
+                    />
+                    <span className="text-xs font-bold text-[#C0D8F0]">
+                      Vitals:{" "}
+                      <strong
+                        className={
+                          project.vitals === "OK"
+                            ? "text-[#00FF66]"
+                            : project.vitals === "Degraded"
+                            ? "text-[#FFD600]"
+                            : "text-[#FF0055]"
+                        }
+                      >
+                        {project.vitals}
+                      </strong>
                     </span>
                   </div>
 
-                  <div className="p-2 bg-[#03070D] border border-[#112233]">
-                    <span className="text-[9px] text-[#5A7A9A] block">SAST SCORE</span>
-                    <span className="font-bold text-[#00E5FF]">
-                      Grade: {project.sastGrade}
-                    </span>
+                  {/* Error count & SAST Grade */}
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="p-2 bg-[#03070D] border border-[#112233]">
+                      <span className="text-[9px] text-[#5A7A9A] block">ERRORS</span>
+                      <span
+                        className={`font-bold ${
+                          project.errorCount > 20
+                            ? "text-[#FF0055]"
+                            : project.errorCount > 0
+                            ? "text-[#FFD600]"
+                            : "text-[#00FF66]"
+                        }`}
+                      >
+                        {project.errorCount} {project.hasSpike && <span className="text-[#FF0055] text-[10px] animate-pulse">(Spike!)</span>}
+                      </span>
+                    </div>
+
+                    <div className="p-2 bg-[#03070D] border border-[#112233]">
+                      <span className="text-[9px] text-[#5A7A9A] block">SAST SCORE</span>
+                      <span className="font-bold text-[#00E5FF]">
+                        Grade: {project.sastGrade}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Metrics strip */}
+                  <div className="flex items-center justify-between text-[9px] text-[#3A5A7A] pt-1">
+                    <span>CPU: {project.metrics.cpu}</span>
+                    <span>MEM: {project.metrics.memory}</span>
+                    <span>P99: {project.metrics.p99Latency}</span>
                   </div>
                 </div>
 
-                {/* Metrics strip */}
-                <div className="flex items-center justify-between text-[9px] text-[#3A5A7A] pt-1">
-                  <span>CPU: {project.metrics.cpu}</span>
-                  <span>MEM: {project.metrics.memory}</span>
-                  <span>P99: {project.metrics.p99Latency}</span>
-                </div>
-              </div>
+                {/* Divider & Actions: Launch & De-enroll */}
+                <div className="border-t border-[#112233] p-3 bg-[#050B13] flex items-center gap-2">
+                  <button
+                    onClick={() => handleLaunch(project)}
+                    className="flex-1 flex items-center justify-center gap-2 py-2 px-3 font-mono font-bold text-xs uppercase tracking-widest text-[#00FF66] bg-[#00FF66]/10 border border-[#00FF66]/40 hover:bg-[#00FF66] hover:text-[#03070D] transition-all cursor-pointer"
+                  >
+                    <span>[ LAUNCH ]</span>
+                    <span>▸</span>
+                  </button>
 
-              {/* Divider & Large Action Button */}
-              <div className="border-t border-[#112233] p-3 bg-[#050B13]">
-                <button
-                  onClick={() => handleLaunch(project)}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 font-mono font-bold text-xs uppercase tracking-widest text-[#00FF66] bg-[#00FF66]/10 border border-[#00FF66]/40 hover:bg-[#00FF66] hover:text-[#03070D] transition-all shadow-[0_0_12px_rgba(0,255,102,0.1)] active:scale-[0.98] cursor-pointer"
-                >
-                  <span>[ CLICK TO LAUNCH ]</span>
-                  <span>▸</span>
-                </button>
-              </div>
-            </CyberCard>
-          );
-        })}
-      </div>
+                  <button
+                    onClick={(e) => handleDelete(project, e)}
+                    disabled={deletingId === project.id}
+                    className="px-3 py-2 font-mono text-[10px] uppercase font-bold text-[#FF0055] bg-[#FF0055]/10 border border-[#FF0055]/40 hover:bg-[#FF0055] hover:text-white transition-all cursor-pointer"
+                    title="De-enroll and remove from fleet"
+                  >
+                    {deletingId === project.id ? "DELETING..." : "✕ DE-ENROLL"}
+                  </button>
+                </div>
+              </CyberCard>
+            );
+          })}
+        </div>
+      )}
 
       {/* Enroll Modal */}
       <EnrollModal

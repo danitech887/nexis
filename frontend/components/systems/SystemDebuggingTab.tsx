@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { MonitoredSystem } from "@/lib/systems";
 import CyberCard from "@/components/ui/CyberCard";
 import CyberButton from "@/components/ui/CyberButton";
+import { cyberAudio } from "@/lib/cyberAudio";
 
 interface SystemDebuggingTabProps {
   system: MonitoredSystem;
@@ -23,6 +24,7 @@ export default function SystemDebuggingTab({
 
   const runLiveDiagnostic = () => {
     setProbing(true);
+    cyberAudio.startProcessing();
     setProbeLog([`[${new Date().toISOString().slice(11, 19)}] Initiating diagnostic probe on ${system.host}:${system.port}...`]);
     setTimeout(() => {
       setProbeLog((prev) => [
@@ -34,6 +36,8 @@ export default function SystemDebuggingTab({
         `[${new Date().toISOString().slice(11, 19)}] Diagnostic test sequence completed with status: NOMINAL`,
       ]);
       setProbing(false);
+      cyberAudio.stopProcessing();
+      cyberAudio.successResolve();
     }, 1200);
   };
 

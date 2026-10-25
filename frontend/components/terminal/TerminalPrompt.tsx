@@ -2,6 +2,7 @@
 
 import { useState, useRef, KeyboardEvent } from "react";
 import CyberButton from "@/components/ui/CyberButton";
+import { cyberAudio } from "@/lib/cyberAudio";
 
 interface TerminalPromptProps {
   onCommand?: (cmd: string) => void;
@@ -32,6 +33,7 @@ export default function TerminalPrompt({
   const submit = () => {
     const cmd = value.trim();
     if (!cmd) return;
+    cyberAudio.scanSweep();
     if (cmd === "help") {
       setShowHelp((s) => !s);
     } else {
@@ -43,6 +45,7 @@ export default function TerminalPrompt({
   };
 
   const handleKey = (e: KeyboardEvent<HTMLInputElement>) => {
+    cyberAudio.terminalKey();
     if (e.key === "Enter") { submit(); return; }
     if (e.key === "ArrowUp") {
       e.preventDefault();

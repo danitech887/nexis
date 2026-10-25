@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import Link from "next/link";
 
 interface LogLine {
   id: number;
@@ -84,7 +85,7 @@ export default function TerminalStream({
           <span className="shrink-0 text-[#5A7A9A] w-[120px] truncate">{line.source}</span>
           {/* Message */}
           <span
-            className="flex-1 break-all"
+            className="flex-1 break-all flex items-center justify-between gap-2"
             style={{
               color:
                 line.level === "ERROR"
@@ -96,7 +97,16 @@ export default function TerminalStream({
                   : "#C0D8F0",
             }}
           >
-            {line.msg}
+            <span>{line.msg}</span>
+            {line.level === "ERROR" && (
+              <Link
+                href={`/errors?log_id=${line.id}&search=${encodeURIComponent(line.msg.slice(0, 40))}`}
+                className="opacity-0 group-hover:opacity-100 px-1.5 py-0.5 text-[9px] bg-[#FF0055]/20 hover:bg-[#FF0055] hover:text-[#03070D] text-[#FF0055] border border-[#FF0055]/40 font-bold tracking-wider shrink-0 transition-all uppercase"
+                title="Open this error in Error Diagnostics & Root Cause Analysis"
+              >
+                TRIAGE IN ERRORS ➔
+              </Link>
+            )}
           </span>
         </div>
       ))}

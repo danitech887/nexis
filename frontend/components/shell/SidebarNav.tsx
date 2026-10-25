@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import NexisLogo from "@/components/ui/NexisLogo";
 import { useActiveSoftware } from "@/lib/ActiveSoftwareContext";
+import { cyberAudio } from "@/lib/cyberAudio";
 
 const ACCENT_STYLES: Record<string, { text: string; border: string; glow: string; bg: string }> = {
   cyan:    { text: "text-[#00E5FF]", border: "border-[#00E5FF]", glow: "shadow-[0_0_10px_rgba(0,229,255,0.4)]",  bg: "bg-[rgba(0,229,255,0.07)]"  },
@@ -72,7 +73,12 @@ export function SidebarNav() {
     <aside className="w-[64px] shrink-0 flex flex-col items-center py-4 gap-1
                       bg-[#070D16] border-r border-[#112233] relative z-10 select-none">
       {/* Animated Nexis System Emblem (Links to Fleet Control) */}
-      <Link href="/projects" title="NEXIS // SOFTWARE FLEET CONTROL" className="mb-3 hover:scale-105 transition-transform">
+      <Link
+        href="/projects"
+        title="NEXIS // SOFTWARE FLEET CONTROL"
+        onClick={() => cyberAudio.cyberClick()}
+        className="mb-3 hover:scale-105 transition-transform"
+      >
         <NexisLogo size={34} accent="cyan" mode="idle" interactive />
       </Link>
 
@@ -83,6 +89,7 @@ export function SidebarNav() {
             key={item.label}
             href={item.href}
             title={item.label}
+            onClick={() => cyberAudio.cyberClick()}
             className={`
               group relative w-12 h-12 flex flex-col items-center justify-center gap-0.5
               border transition-all duration-200 cursor-pointer select-none

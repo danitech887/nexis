@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { cyberAudio } from "@/lib/cyberAudio";
 
 type Accent = "cyan" | "green" | "magenta" | "yellow";
 type Variant = "solid" | "outline" | "ghost";
@@ -10,6 +11,7 @@ interface CyberButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement>
   variant?: Variant;
   size?: "sm" | "md" | "lg";
   glitch?: boolean;
+  sound?: boolean;
   children: React.ReactNode;
 }
 
@@ -31,8 +33,10 @@ export default function CyberButton({
   variant = "outline",
   size = "md",
   glitch = false,
+  sound = true,
   children,
   className = "",
+  onClick,
   ...props
 }: CyberButtonProps) {
   const a = ACCENT_MAP[accent];
@@ -54,6 +58,13 @@ export default function CyberButton({
     baseStyle.fontWeight = "bold";
   }
 
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (sound && !props.disabled) {
+      cyberAudio.cyberClick();
+    }
+    onClick?.(e);
+  };
+
   return (
     <button
       className={`
@@ -65,6 +76,7 @@ export default function CyberButton({
         ${className}
       `}
       style={baseStyle}
+      onClick={handleClick}
       onMouseEnter={(e) => {
         (e.currentTarget as HTMLButtonElement).style.background =
           variant === "solid" ? a.color : a.hover;

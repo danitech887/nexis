@@ -5,6 +5,7 @@ import Link from "next/link";
 import VitalsBadge from "./VitalsBadge";
 import NexisLogo from "@/components/ui/NexisLogo";
 import NexisProcessModal from "@/components/ui/NexisProcessModal";
+import CyberAudioControl from "./CyberAudioControl";
 import { useActiveSoftware } from "@/lib/ActiveSoftwareContext";
 
 export function Topbar() {
@@ -73,13 +74,13 @@ export function Topbar() {
           >
             <span
               className={`w-2 h-2 rounded-full ${
-                activeSoftware.vitals === "OK"
+                activeSoftware?.vitals === "OK"
                   ? "bg-[#00FF66] shadow-[0_0_6px_#00FF66]"
                   : "bg-[#FFD600] animate-pulse shadow-[0_0_6px_#FFD600]"
               }`}
             />
             <span className="text-[#5A7A9A] text-[10px]">ACTIVE TARGET:</span>
-            <span className="text-white font-bold">{activeSoftware.name}</span>
+            <span className="text-white font-bold">{activeSoftware?.name || "ShuleBase"}</span>
             <span className="text-[#00E5FF] text-[10px]">▾</span>
           </button>
 
@@ -161,11 +162,14 @@ export function Topbar() {
         {/* Lab Shortcut Button */}
         <button
           onClick={() => setIsLabOpen(true)}
-          className="px-2 py-0.5 border border-[#00E5FF]/40 text-[#00E5FF] hover:bg-[#00E5FF]/10 text-[9px] font-mono tracking-widest font-bold transition-all ml-2 flex items-center gap-1"
+          className="px-2 py-0.5 border border-[#00E5FF]/40 text-[#00E5FF] hover:bg-[#00E5FF]/10 text-[9px] font-mono tracking-widest font-bold transition-all ml-2 flex items-center gap-1 cursor-pointer"
         >
           <span className="w-1.5 h-1.5 rounded-full bg-[#00E5FF] animate-ping" />
           EMBLEM LAB
         </button>
+
+        {/* Cyberpunk Audio HUD */}
+        <CyberAudioControl />
 
       {/* Spacer */}
       <div className="ml-auto flex items-center gap-4 text-xs text-[#2A4A6A]">

@@ -5,6 +5,7 @@ import NexisLogo, { NexisLogoAccent, NexisLogoMode, NexisLogoSize } from "./Nexi
 import NexisLoader, { NexisOverlayLoader } from "./NexisLoader";
 import CyberButton from "./CyberButton";
 import CyberCard from "./CyberCard";
+import { cyberAudio } from "@/lib/cyberAudio";
 
 interface NexisProcessModalProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ export default function NexisProcessModal({ isOpen, onClose }: NexisProcessModal
   const [selectedSize, setSelectedSize] = useState<NexisLogoSize>("xl");
   const [viewType, setViewType] = useState<"emblem" | "banner">("emblem");
   const [showOverlayLoader, setShowOverlayLoader] = useState(false);
+  const [isLoopingProcessing, setIsLoopingProcessing] = useState(false);
 
   if (!isOpen) return null;
 
@@ -177,12 +179,126 @@ export default function NexisProcessModal({ isOpen, onClose }: NexisProcessModal
             />
           </CyberCard>
 
+          {/* Cyberpunk Audio Synthesizer & Sound FX Matrix */}
+          <CyberCard title="CYBERPUNK AUDIO SYNTHESIZER & SOUND FX MATRIX" accent="cyan">
+            <div className="flex flex-col gap-3 font-mono text-xs">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] text-[#5A7A9A]">
+                  Zero-latency Web Audio procedural synthesis engine powering telemetry logs, error alarms, and neural processing loops.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = cyberAudio.toggleMute();
+                    setSelectedAccent(next ? "magenta" : "cyan");
+                  }}
+                  className={`px-2.5 py-1 text-[10px] border font-bold tracking-wider transition-all cursor-pointer ${
+                    cyberAudio.getMuted()
+                      ? "border-[#FF0055] bg-[#FF0055]/15 text-[#FF0055]"
+                      : "border-[#00FF66] bg-[#00FF66]/15 text-[#00FF66]"
+                  }`}
+                >
+                  {cyberAudio.getMuted() ? "🔇 AUDIO MUTED" : "🔊 AUDIO LIVE"}
+                </button>
+              </div>
+
+              {/* Soundboard Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => cyberAudio.terminalKey()}
+                  className="px-3 py-2 text-left border border-[#112233] bg-[#03070D] hover:border-[#00E5FF] hover:bg-[#00E5FF]/10 text-[#C0D8F0] hover:text-[#00E5FF] transition-all cursor-pointer group"
+                >
+                  <div className="text-[10px] font-bold">⌨ HACKER KEYSTROKE</div>
+                  <div className="text-[9px] text-[#5A7A9A] group-hover:text-[#A0D0FF]">Terminal chatter / mechanical tap</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => cyberAudio.logBurst()}
+                  className="px-3 py-2 text-left border border-[#112233] bg-[#03070D] hover:border-[#00FF66] hover:bg-[#00FF66]/10 text-[#C0D8F0] hover:text-[#00FF66] transition-all cursor-pointer group"
+                >
+                  <div className="text-[10px] font-bold text-[#00FF66]">📡 LOG PACKET BURST</div>
+                  <div className="text-[9px] text-[#5A7A9A] group-hover:text-[#A0FFA0]">High-freq telemetry stream arrival</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => cyberAudio.errorDetected()}
+                  className="px-3 py-2 text-left border border-[#112233] bg-[#03070D] hover:border-[#FFD600] hover:bg-[#FFD600]/10 text-[#C0D8F0] hover:text-[#FFD600] transition-all cursor-pointer group"
+                >
+                  <div className="text-[10px] font-bold text-[#FFD600]">⚠ ERROR IDENTIFICATION</div>
+                  <div className="text-[9px] text-[#5A7A9A] group-hover:text-[#FFE0A0]">Dissonant glitch drop alert</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => cyberAudio.threatAlert()}
+                  className="px-3 py-2 text-left border border-[#112233] bg-[#03070D] hover:border-[#FF0055] hover:bg-[#FF0055]/10 text-[#C0D8F0] hover:text-[#FF0055] transition-all cursor-pointer group"
+                >
+                  <div className="text-[10px] font-bold text-[#FF0055]">🚨 CRITICAL THREAT ALARM</div>
+                  <div className="text-[9px] text-[#5A7A9A] group-hover:text-[#FFA0B0]">Pulsed intrusion / fatal crash siren</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => cyberAudio.dataBurst()}
+                  className="px-3 py-2 text-left border border-[#112233] bg-[#03070D] hover:border-[#00E5FF] hover:bg-[#00E5FF]/10 text-[#C0D8F0] hover:text-[#00E5FF] transition-all cursor-pointer group"
+                >
+                  <div className="text-[10px] font-bold text-[#00E5FF]">📡 DATA BURST</div>
+                  <div className="text-[9px] text-[#5A7A9A] group-hover:text-[#A0D0FF]">
+                    High-speed electronic packet sweep
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => cyberAudio.scanSweep()}
+                  className="px-3 py-2 text-left border border-[#112233] bg-[#03070D] hover:border-[#00E5FF] hover:bg-[#00E5FF]/10 text-[#C0D8F0] hover:text-[#00E5FF] transition-all cursor-pointer group"
+                >
+                  <div className="text-[10px] font-bold">🔍 TARGET SCAN / LOCK</div>
+                  <div className="text-[9px] text-[#5A7A9A] group-hover:text-[#A0D0FF]">Radar sweep & AST node focus</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => cyberAudio.patchApplied()}
+                  className="px-3 py-2 text-left border border-[#112233] bg-[#03070D] hover:border-[#00FF66] hover:bg-[#00FF66]/10 text-[#C0D8F0] hover:text-[#00FF66] transition-all cursor-pointer group"
+                >
+                  <div className="text-[10px] font-bold text-[#00FF66]">✦ PATCH DEPLOY / RESOLVE</div>
+                  <div className="text-[9px] text-[#5A7A9A] group-hover:text-[#A0FFA0]">Ascending cyber triad resolve</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => cyberAudio.glitch()}
+                  className="px-3 py-2 text-left border border-[#112233] bg-[#03070D] hover:border-[#FF0055] hover:bg-[#FF0055]/10 text-[#C0D8F0] hover:text-[#FF0055] transition-all cursor-pointer group"
+                >
+                  <div className="text-[10px] font-bold text-[#FF88A0]">⚡ SIGNAL GLITCH</div>
+                  <div className="text-[9px] text-[#5A7A9A] group-hover:text-[#FFA0B0]">Interference burst & purge drop</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => cyberAudio.powerUp()}
+                  className="px-3 py-2 text-left border border-[#112233] bg-[#03070D] hover:border-[#00E5FF] hover:bg-[#00E5FF]/10 text-[#C0D8F0] hover:text-[#00E5FF] transition-all cursor-pointer group"
+                >
+                  <div className="text-[10px] font-bold text-[#00E5FF]">☢ REACTOR POWER-UP</div>
+                  <div className="text-[9px] text-[#5A7A9A] group-hover:text-[#A0D0FF]">Subharmonic spin-up sweep</div>
+                </button>
+              </div>
+            </div>
+          </CyberCard>
+
           {/* Action Row */}
           <div className="flex items-center justify-between pt-2 border-t border-[#112233]">
             <CyberButton
               accent={selectedAccent}
               size="sm"
-              onClick={() => setShowOverlayLoader(true)}
+              onClick={() => {
+                cyberAudio.powerUp();
+                setShowOverlayLoader(true);
+              }}
             >
               ⛶ TRIGGER FULLSCREEN OVERLAY LOADER
             </CyberButton>
@@ -191,7 +307,14 @@ export default function NexisProcessModal({ isOpen, onClose }: NexisProcessModal
               accent="cyan"
               variant="outline"
               size="sm"
-              onClick={onClose}
+              onClick={() => {
+                cyberAudio.cyberClick();
+                if (isLoopingProcessing) {
+                  cyberAudio.stopProcessing();
+                  setIsLoopingProcessing(false);
+                }
+                onClose();
+              }}
             >
               CLOSE LAB
             </CyberButton>

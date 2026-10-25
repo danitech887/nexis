@@ -3,39 +3,131 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { INITIAL_SOFTWARE_FLEET, SoftwareProject, getSoftwareById } from "./softwareFleet";
 
+import { fetchEnrolledSoftwares, deEnrollSoftwareOnBackend, EnrolledSoftware } from "./backendApi";
+
 interface ActiveSoftwareContextType {
   activeSoftware: SoftwareProject;
   setActiveSoftwareId: (id: string) => void;
   fleet: SoftwareProject[];
   enrollSoftware: (project: SoftwareProject) => void;
+  deEnrollSoftware: (id: string) => Promise<void>;
+  refreshFleet: () => Promise<void>;
 }
+
+const DEFAULT_EMPTY_FALLBACK: SoftwareProject = {
+  id: "unassigned",
+  name: "No Software Enrolled",
+  category: "Web API",
+  platform: "Ready for Enrollment",
+  vitals: "OK",
+  errorCount: 0,
+  hasSpike: false,
+  sastGrade: "A",
+  healthScore: 100,
+  description: "No monitored software targets enrolled in Nexis. Click '+ ENROLL' to add a system.",
+  repoPath: "",
+  lastDeployed: "Never",
+  metrics: {
+    cpu: "0%",
+    memory: "0 MB",
+    p99Latency: "0ms",
+    activeSessions: "0",
+  },
+  scopedLogs: [],
+  scopedCrashes: [],
+  scopedSast: [],
+  astHighlight: {
+    rootClass: "NoTarget",
+    loc: 0,
+    methods: [],
+  },
+  aiFixSnippet: {
+    title: "Enroll System",
+    file: "enroll.sh",
+    diffBefore: "",
+    diffAfter: "",
+    tests: [],
+  },
+};
 
 const ActiveSoftwareContext = createContext<ActiveSoftwareContextType | undefined>(undefined);
 
 export function ActiveSoftwareProvider({ children }: { children: React.ReactNode }) {
-  const [fleet, setFleet] = useState<SoftwareProject[]>(INITIAL_SOFTWARE_FLEET);
-  const [activeId, setActiveId] = useState<string>("shulebase-android");
+  const [fleet, setFleet] = useState<SoftwareProject[]>([]);
+  const [activeId, setActiveId] = useState<string>("");
 
-  // Load from localStorage on client mount if available
+  // Load from SQLite backend and merge with fleet
+  const refreshFleet = async () => {
+    try {
+      const backendSoftwares = await fetchEnrolledSoftwares();
+      if (backendSoftwares && backendSoftwares.length > 0) {
+        const mappedList: SoftwareProject[] = backendSoftwares.map((b: EnrolledSoftware) => ({
+          id: b.id,
+          name: b.name,
+          category: (b.category as any) || "Web API",
+          platform: b.platform || "Generic Application",
+          vitals: b.status === "DEGRADED" ? "Degraded" : "OK",
+          errorCount: 0,
+          hasSpike: false,
+          sastGrade: "A",
+          healthScore: b.health_score ?? 100,
+          description: b.description || `Enterprise application managed by Nexis.`,
+          repoPath: b.local_repo_path,
+          repoUrl: b.repo_url,
+          targetUrl: b.target_url,
+          provider: b.provider || "custom",
+          providerProjectId: b.provider_project_id,
+          lastDeployed: "Active",
+          metrics: {
+            cpu: "12%",
+            memory: "160 MB",
+            p99Latency: "40ms",
+            activeSessions: "100%",
+          },
+          scopedLogs: [
+            {
+              id: 1,
+              ts: new Date().toISOString().slice(11, 23),
+              level: "INFO",
+              tag: "SQLite.Engine",
+              msg: `Loaded software ${b.name} from Nexis SQLite metadata catalog.`,
+            },
+          ],
+          scopedCrashes: [],
+          scopedSast: [],
+          astHighlight: {
+            rootClass: "ApplicationModule",
+            loc: 210,
+            methods: [{ name: "init()", complexity: 1, lines: 12 }],
+          },
+          aiFixSnippet: {
+            title: "Standard Monitoring",
+            file: "config.json",
+            diffBefore: "",
+            diffAfter: "",
+            tests: [],
+          },
+        }));
+
+        setFleet(mappedList);
+      } else {
+        setFleet([]);
+      }
+    } catch (e) {
+      console.warn("Could not sync with backend SQLite:", e);
+      setFleet([]);
+    }
+  };
+
   useEffect(() => {
+    refreshFleet();
     try {
       const savedId = localStorage.getItem("nexis_active_software_id");
-      if (savedId && fleet.some((p) => p.id === savedId)) {
+      if (savedId) {
         setActiveId(savedId);
       }
-      const savedFleet = localStorage.getItem("nexis_custom_fleet");
-      if (savedFleet) {
-        const parsed = JSON.parse(savedFleet);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setFleet((prev) => {
-            const existingIds = new Set(prev.map((p) => p.id));
-            const newItems = parsed.filter((p: SoftwareProject) => !existingIds.has(p.id));
-            return [...prev, ...newItems];
-          });
-        }
-      }
     } catch {
-      // Fallback
+      // Ignore
     }
   }, []);
 
@@ -49,19 +141,22 @@ export function ActiveSoftwareProvider({ children }: { children: React.ReactNode
   };
 
   const enrollSoftware = (project: SoftwareProject) => {
-    setFleet((prev) => {
-      const updated = [project, ...prev];
-      try {
-        localStorage.setItem("nexis_custom_fleet", JSON.stringify(updated.filter((p) => !INITIAL_SOFTWARE_FLEET.some((init) => init.id === p.id))));
-      } catch {
-        // Ignore
-      }
-      return updated;
-    });
+    setFleet((prev) => [project, ...prev.filter((p) => p.id !== project.id)]);
     setActiveSoftwareId(project.id);
+    refreshFleet();
   };
 
-  const activeSoftware = fleet.find((p) => p.id === activeId) || fleet[0];
+  const deEnrollSoftware = async (id: string) => {
+    try {
+      await deEnrollSoftwareOnBackend(id);
+    } catch (e) {
+      console.warn("Failed to delete software on backend:", e);
+    }
+    setFleet((prev) => prev.filter((p) => p.id !== id));
+    await refreshFleet();
+  };
+
+  const activeSoftware = fleet.find((p) => p.id === activeId) || fleet[0] || DEFAULT_EMPTY_FALLBACK;
 
   return (
     <ActiveSoftwareContext.Provider
@@ -70,6 +165,8 @@ export function ActiveSoftwareProvider({ children }: { children: React.ReactNode
         setActiveSoftwareId,
         fleet,
         enrollSoftware,
+        deEnrollSoftware,
+        refreshFleet,
       }}
     >
       {children}
@@ -81,10 +178,12 @@ export function useActiveSoftware() {
   const context = useContext(ActiveSoftwareContext);
   if (!context) {
     return {
-      activeSoftware: INITIAL_SOFTWARE_FLEET[0],
+      activeSoftware: DEFAULT_EMPTY_FALLBACK,
       setActiveSoftwareId: () => {},
-      fleet: INITIAL_SOFTWARE_FLEET,
+      fleet: [],
       enrollSoftware: () => {},
+      deEnrollSoftware: async () => {},
+      refreshFleet: async () => {},
     };
   }
   return context;

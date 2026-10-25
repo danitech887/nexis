@@ -1,0 +1,30 @@
+services:
+  nexis-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nexis-core-engine
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - PROJECT_NAME=Nexis Core Engine
+      - API_V1_STR=/api/v1
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - OLLAMA_MODEL=qwen2.5-coder:7b
+      - OLLAMA_CONTEXT_WINDOW=8192
+      - OLLAMA_TEMPERATURE=0.1
+      - REPOS_STORAGE_PATH=/srv/repos
+    volumes:
+      - repos_data:/srv/repos
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  repos_data:

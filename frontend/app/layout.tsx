@@ -12,12 +12,16 @@ export const metadata: Metadata = {
 };
 
 import { ActiveSoftwareProvider } from "@/lib/ActiveSoftwareContext";
+import { NexisSelfTelemetryListener } from "@/lib/nexisSelfTelemetry";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="h-full">
       <body className="h-full flex flex-col overflow-hidden cyber-grid-bg">
         <ActiveSoftwareProvider>
+          {/* Nexis Self-Monitoring Telemetry Sensor */}
+          <NexisSelfTelemetryListener />
+
           {/* Persistent Topbar HUD */}
           <Topbar />
 

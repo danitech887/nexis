@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: nexis-backend
+    runtime: python
+    rootDir: nexis-backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: ENVIRONMENT
+        value: production
+      - key: SQLITE_DB_PATH
+        value: data/nexis.db
+      - key: API_KEY_SECRET
+        generateValue: true
+      - key: OLLAMA_BASE_URL
+        value: http://localhost:11434
+      - key: OLLAMA_MODEL
+        value: qwen2.5-coder:7b
